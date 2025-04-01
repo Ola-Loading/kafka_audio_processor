@@ -176,3 +176,6 @@ cython_debug/
 # Audio files
 *.mp3
 *.wav
+
+#Virtual-env
+kafka_python_venv/
