@@ -179,3 +179,7 @@ cython_debug/
 
 #Virtual-env
 kafka_python_venv/
+
+#jupyter-notebooks
+.ipynb
+
