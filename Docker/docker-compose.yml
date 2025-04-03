@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: kafka_broker_container
+    ports:
+      - "9092:9092"
+    environment:
+      - advertised.listeners=PLAINTEXT://localhost:9092
