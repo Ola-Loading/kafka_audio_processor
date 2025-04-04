@@ -8,8 +8,9 @@ Kafka Audio Processor is a Python-based project that leverages **Apache Kafka** 
 /kafka-audio-processor
 │── /producer                 # Kafka producer script
 │── /consumer                 # Kafka consumer script
-│   ├── .env.example          # Example environment file
+├── .env.example              # Example environment file
 │── /docker                   # Docker-related files (e.g., Dockerfile, docker-compose)
+    │── docker-compose.yaml   # Docker compose script to load up kafka image based container 
 │── /scripts                  # Any helper scripts
 │── .gitignore                # Ignore unnecessary files
 │── README.md                 # Project documentation
@@ -55,18 +56,15 @@ Copy `.env.example` to `.env` and update the required API keys and Kafka configu
 cp .env.example .env
 ```
 
-### **5. Start Kafka (Using Docker-Compose)**
+### **5. Start Kafka (Using Docker-Compose) in docker file **
 ```bash
 docker-compose up -d
 ```
 
-### **6. Run Producer & Consumer**
+### **6. Run Main.py script**
 ```bash
-# Start the Kafka producer
-python producer/producer.py
-
-# Start the Kafka consumer
-python consumer/consumer.py
+# Starts the Kafka producer and consumer
+python main.py
 ```
 
 ## 🐳 Running with Docker
@@ -76,9 +74,7 @@ docker-compose up --build
 ```
 
 ## 📌 Usage
-1. **Run the consumer script** to activate the listening process and transcription/translation of the audio.
-2. **Run the producer script** to send audio chunks to Kafka.
-3. **Check the output** for transcriptions and translations.
+1. **Run the main script**  Activate the listening process and transcription/translation of the audio. Then send audio chunks to Kafka and **Check the output** for transcriptions and translations.
 
 ## 📜 License
 This project is licensed under the [MIT License](LICENSE).
