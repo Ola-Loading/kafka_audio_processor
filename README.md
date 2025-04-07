@@ -32,7 +32,7 @@ git clone https://github.com/your-username/kafka-audio-processor.git
 cd kafka-audio-processor
 ```
 
-### **2. Set Up Virtual Environment**
+### **2a. Set Up Virtual Environment**
 ```bash
 # Create a virtual environment
 python -m venv kafka_python_venv
@@ -43,11 +43,17 @@ kafka_python_venv\Scripts\activate
 
 # macOS/Linux
 source kafka_python_venv/bin/activate
+
+# Upgrade PiP if necessary
+pip install --upgrade pip setuptools wheel
 ```
 
-### **3. Install Dependencies**
+
+### **3. Install Dependencies and system wide resources**
 ```bash
 pip install -r requirements.txt
+brew install ffmpeg      # macOS
+sudo apt install ffmpeg  # Linux
 ```
 
 ### **4. Configure Environment Variables**
