@@ -1,6 +1,5 @@
 from kafka import KafkaConsumer
 import os
-import wave
 from pydub import AudioSegment
 from pydub.playback import play
 import pyaudio
@@ -13,12 +12,12 @@ import detectlanguage
 
 
 
-def consume_audio_stream(topic='audio_events', output_file='received_audio.wav'):
+def consume_audio_stream(topic='audio_events', output_file='received_audio.mp3'):
     """
-    Consumes audio chunks from Kafka and reconstructs the audio file as WAV.
+    Consumes audio chunks from Kafka and reconstructs the audio file as mp3.
     
     :param topic: Kafka topic to consume audio data from.
-    :param output_file: Path to save the reassembled WAV file.
+    :param output_file: Path to save the reassembled mp3 file.
     """
     sample_format = pyaudio.paInt16  # 16-bit format
     channels = 2  # Stereo
@@ -42,41 +41,29 @@ def consume_audio_stream(topic='audio_events', output_file='received_audio.wav')
             frames.append(message.value)
             print(f"Received chunk of size {len(message.value)} bytes")
 
-    # Save to WAV file
-    with wave.open(output_file, 'wb') as wf:
-        wf.setnchannels(channels)
-        wf.setsampwidth(p.get_sample_size(sample_format))
-        wf.setframerate(fs)
-        wf.writeframes(b''.join(frames))
+      # Write MP3 binary data
+    with open(output_file, 'wb') as f:
+        f.write(b''.join(frames))
 
-    print(f"Audio file reconstructed: {output_file}")
+    print(f"MP3 file reconstructed: {output_file}")
     return output_file
 
 
 def play_audio_transcribe(file_path):
-    """Converts WAV to MP3, deletes WAV, plays MP3, and transcribes."""
-    
-    # Ensure correct MP3 filename
-    mp3_file = os.path.splitext(file_path)[0] + ".mp3"
+    """Plays MP3, and transcribes."""
 
-    # Convert WAV to MP3
+    #play MP3 File
     try:
-        sound = AudioSegment.from_wav(file_path)
-        sound.export(mp3_file, format="mp3")
-        os.remove(file_path)  # Delete WAV file after conversion
-        print(f"Recording saved as {mp3_file}")
-        print(f"Recording deleted: {file_path}")
-
-        # Play MP3
-        # audio = AudioSegment.from_mp3(mp3_file)
-        # play(audio)
+        sound = AudioSegment.from_mp3(file_path)
+        play(sound)
+        print(f"Recording saved as {file_path}")
 
         # Transcribe using Whisper (optional)
         model = whisper.load_model("base")
-        result = model.transcribe(mp3_file)
+        result = model.transcribe(file_path)
         print("Transcription:", result["text"])
 
-        return (mp3_file,result)
+        return (file_path,result)
 
     except Exception as e:
         print(f"Error processing audio: {e}")
@@ -112,7 +99,7 @@ def translate_text(result):
 
 # Example usage
 def main_consumer():
-    wav_file = consume_audio_stream()  # Receive and reconstruct audio
-    playable_audio = play_audio_transcribe(wav_file)  # Convert, play, and transcribe
+    mp3_file = consume_audio_stream()  # Receive and reconstruct audio
+    playable_audio = play_audio_transcribe(mp3_file)  # Convert, play, and transcribe
     translate_text(playable_audio[1])
 
