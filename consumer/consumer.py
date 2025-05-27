@@ -4,10 +4,12 @@ from pydub import AudioSegment
 from pydub.playback import play
 import pyaudio
 import whisper
-import deepl
-from dotenv import load_dotenv
+# import deepl
+# from dotenv import load_dotenv
 import os
-import detectlanguage 
+# import detectlanguage 
+from kafka import KafkaProducer
+from kafka.errors import KafkaError
 
 
 
@@ -69,37 +71,61 @@ def play_audio_transcribe(file_path):
         print(f"Error processing audio: {e}")
         return str(e)
 
-def translate_text(result):
-    """Translates transcribed text into multiple languages."""
-    load_dotenv()  # Loads variables from .env
-    auth_key = os.getenv("DEEPL_AUTH_KEY")
-    deepl_client = deepl.DeepLClient(auth_key)
-    detectlanguage.configuration.api_key = os.getenv("DETECT_LANG_KEY")
-    language_dict = {'l1':'EN-GB','l2':'FR','l3':'PT-BR'}
-    clone = dict(language_dict)
-    detected_langs = detectlanguage.detect(result["text"])
-    detected_lang = max(detected_langs, key=lambda x: x['confidence'])['language'].upper()
+# def translate_text(result):
+#     """Translates transcribed text into multiple languages."""
+#     load_dotenv()  # Loads variables from .env
+#     auth_key = os.getenv("DEEPL_AUTH_KEY")
+#     deepl_client = deepl.DeepLClient(auth_key)
+#     detectlanguage.configuration.api_key = os.getenv("DETECT_LANG_KEY")
+#     language_dict = {'l1':'EN-GB','l2':'FR','l3':'PT-BR'}
+#     clone = dict(language_dict)
+#     detected_langs = detectlanguage.detect(result["text"])
+#     detected_lang = max(detected_langs, key=lambda x: x['confidence'])['language'].upper()
     
+#     try:
+#         # Remove detected language from translation list
+#         language_dict = {k: v for k, v in language_dict.items() if detected_lang not in v}
+        
+#         translated = []
+#         for lang_code in language_dict.values():
+#             translated_text = deepl_client.translate_text(result["text"], target_lang=lang_code)
+#             translated.append((lang_code, translated_text))
+#             print(f"Translation ({lang_code}): {translated_text}")
+        
+#         return translated
+#     except Exception as e:
+#         return str(e)
+
+def send_transcriptions(text, topic='transcriptions'):
+    """
+    Takes a transcription and sends it to a kafka topic
+    
+    :param text: transcription.
+    :param topic: Kafka topic to send the data to.
+    """
     try:
-        # Remove detected language from translation list
-        language_dict = {k: v for k, v in language_dict.items() if detected_lang not in v}
+        producer = KafkaProducer(
+            bootstrap_servers='localhost:9092',
+            value_serializer=lambda v: v.encode('utf-8')
+        )
+        producer.send(topic,value=text)
+        print("Sent text to Kafka")
         
-        translated = []
-        for lang_code in language_dict.values():
-            translated_text = deepl_client.translate_text(result["text"], target_lang=lang_code)
-            translated.append((lang_code, translated_text))
-            print(f"Translation ({lang_code}): {translated_text}")
-        
-        return translated
-    except Exception as e:
-        return str(e)
+        producer.send(topic, value="end")  # Send end marker
+
+        print(f"Sent transcription to Kafka")
+
+    except KafkaError as e:
+        print(f"Kafka Error: {e}")
+
+    finally:
+        producer.flush()
+        producer.close()
 
 
-    
-
-# Example usage
 def main_consumer():
     mp3_file = consume_audio_stream()  # Receive and reconstruct audio
     playable_audio = play_audio_transcribe(mp3_file)  # Convert, play, and transcribe
-    translate_text(playable_audio[1])
+    # translate_text(playable_audio[1])
+    send_transcriptions(playable_audio[1]["text"])
 

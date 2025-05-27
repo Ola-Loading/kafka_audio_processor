@@ -59,8 +59,9 @@ def record_audio_as_wav(filename):
 
     frames = []
     silent_chunks = 0
-    time.sleep(2)
+  
     print("Recording... Speak now!")
+    time.sleep(1)
 
     while True:
         data = stream.read(chunk,exception_on_overflow = False)  # Read chunk of audio
