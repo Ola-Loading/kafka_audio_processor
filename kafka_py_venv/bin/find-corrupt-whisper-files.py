@@ -1,4 +1,4 @@
-#!/Users/olaogunade/Documents/GitHub/kafka_audio_processor/kafka_py_venv/bin/python3
+#!/Users/olaogunade/Documents/GitHub/kafka_audio_processor/kafka_py_venv/bin/python3.9
 # encoding: utf-8
 """Find and (optionally) delete corrupt Whisper data files"""
 from __future__ import absolute_import, print_function, unicode_literals

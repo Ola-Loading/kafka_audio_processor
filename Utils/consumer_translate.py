@@ -73,7 +73,9 @@ def translate_text(result):
     
 
 # Example usage
-def consumer_translate():
+def consumer_translate(output_queue):
     text = consume_transcript() # Receive and save transcript
-    translate_text(text)
+    translation = translate_text(text)
+    output_queue.put(translation)  # Send translations back to Streamlit
+
 
