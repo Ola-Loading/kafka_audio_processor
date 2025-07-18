@@ -4,6 +4,8 @@ from producer.producer import main_producer
 import time
 from multiprocessing import Process
 
+
+
 if __name__ == "__main__":
     consumer_process = Process(target=main_consumer)
     consumer_process.start()

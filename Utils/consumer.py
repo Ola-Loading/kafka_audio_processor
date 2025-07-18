@@ -124,9 +124,10 @@ def send_transcriptions(text, topic='transcriptions'):
         producer.close()
 
 
-def main_consumer():
+def main_consumer(output_queue):
     mp3_file = consume_audio_stream()  # Receive and reconstruct audio
     playable_audio = play_audio_transcribe(mp3_file)  # Convert, play, and transcribe
     # translate_text(playable_audio[1])
+    output_queue.put(playable_audio[1]["text"])  # Return transcription to main app
     send_transcriptions(playable_audio[1]["text"])
 

@@ -1,4 +1,4 @@
-#!/Users/olaogunade/Documents/GitHub/kafka_audio_processor/kafka_py_venv/bin/python3
+#!/Users/olaogunade/Documents/GitHub/kafka_audio_processor/kafka_py_venv/bin/python3.9
 
 # whisper-fill: unlike whisper-merge, don't overwrite data that's
 # already present in the target file, but instead, only add the missing
