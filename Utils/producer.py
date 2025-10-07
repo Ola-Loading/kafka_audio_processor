@@ -6,6 +6,7 @@ import numpy as np
 from pydub import AudioSegment
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
+from Utils.logger import log_to_kafka
 
 
 def read_audio_file(file_path): 
@@ -49,7 +50,7 @@ def record_audio_as_wav(filename):
     fs = 44100  # Sample rate (CD quality)
     filename = filename
     silence_threshold = 500  # Adjust based on noise levels
-    silence_duration = 2  # Stop after 2 seconds of silence
+    silence_duration = 4  # Stop after 4 seconds of silence
 
     p = pyaudio.PyAudio()
     stream = p.open(format=sample_format,
@@ -61,8 +62,12 @@ def record_audio_as_wav(filename):
     frames = []
     silent_chunks = 0
   
-    print("Recording... Speak now!")
-    time.sleep(1)
+    # print("Please wait until it says you can start recording")
+    log_to_kafka("Please wait until it says you can start recording")
+    time.sleep(0.2)
+
+    # print("Recording... Speak now!")
+    log_to_kafka("Recording... Speak now!")
 
     while True:
         data = stream.read(chunk,exception_on_overflow = False)  # Read chunk of audio

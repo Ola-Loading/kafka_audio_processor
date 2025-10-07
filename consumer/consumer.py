@@ -58,7 +58,7 @@ def play_audio_transcribe(file_path):
     #play MP3 File
     try:
         sound = AudioSegment.from_mp3(file_path)
-        play(sound)
+        # play(sound)
         print(f"Recording saved as {file_path}")
 
         # Transcribe using Whisper (optional)
