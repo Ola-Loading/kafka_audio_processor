@@ -29,7 +29,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV /Users/olaogunade/Documents/GitHub/kafka_audio_processor/kafka_py_venv
+set -gx VIRTUAL_ENV /Users/olaogunade/Documents/Jobs/Projects_Practice/kafka_audio_processor/kafka_py_venv
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/"bin $PATH
