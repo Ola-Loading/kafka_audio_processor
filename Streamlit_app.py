@@ -79,7 +79,7 @@ if st.button("Start Audio Processing"):
     st.subheader("📡 Live Logs")
     log_placeholder = st.empty()
 
-    # Use flag to stop log thread
+    # # Use flag to stop log thread
     stop_flag = {"stop": False}
     log_thread = threading.Thread(target=stream_logs_live, args=(log_placeholder, stop_flag))
     log_thread.start()

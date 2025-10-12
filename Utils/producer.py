@@ -13,44 +13,55 @@ def read_audio_file(file_path):
        with open(file_path, 'rb') as audio_file: 
            return audio_file.read() 
 
-def send_audio_stream_to_kafka(snippet, topic='audio_events'):
+def send_audio_stream_to_kafka(snippet, topic='audio_events', max_retries=5, retry_delay=2):
     """
-    Streams an MP3 file in chunks to a Kafka topic instead of loading it into memory.
-    
-    :param file_path: Path to the MP3 file.
+    Streams an MP3 file in chunks to a Kafka topic with retry logic.
+
+    :param snippet: Path to the MP3 file.
     :param topic: Kafka topic to send the data to.
-    :param chunk_size: Size of each chunk in bytes (default 64 KB).
+    :param max_retries: Number of times to retry on failure.
+    :param retry_delay: Delay in seconds between retries.
     """
-    try:
-        producer = KafkaProducer(
-            bootstrap_servers='localhost:9092'
-        )
-        with open(snippet, 'rb') as audio_file:
-            while chunk := audio_file.read(65536):  # 64 KB chunks
-                 producer.send(topic, value=chunk)
-                 print("Sent chunk to Kafka")
-        
-        producer.send(topic, value=b"end")  # Send end marker
+    attempts = 0
+    while attempts < max_retries:
+        try:
+            producer = KafkaProducer(bootstrap_servers='localhost:9092')
 
-        print(f"Sent voice snippet to Kafka")
+            with open(snippet, 'rb') as audio_file:
+                while chunk := audio_file.read(65536):  # 64 KB chunks
+                    producer.send(topic, value=chunk)
+                    print("Sent chunk to Kafka")
+            
+            producer.send(topic, value=b"end")  # Send end marker
+            print("Sent voice snippet to Kafka")
 
-    except KafkaError as e:
-        print(f"Kafka Error: {e}")
+            # Cleanup
+            producer.flush()
+            producer.close()
+            os.remove(snippet)
 
-    finally:
-        producer.flush()
-        producer.close()
+            break  # Success! Exit retry loop
 
-    os.remove(snippet)
+        except KafkaError as e:
+            attempts += 1
+            print(f"Kafka error occurred: {e}")
+            if attempts < max_retries:
+                print(f"Retrying ({attempts}/{max_retries}) in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print("Max retries reached. Giving up.")
+                break
 
-def record_audio_as_wav(filename):
-    chunk = 1024  # Number of audio samples per chunk
-    sample_format = pyaudio.paInt16  # 16-bit format
-    channels = 2  # Stereo
-    fs = 44100  # Sample rate (CD quality)
-    filename = filename
-    silence_threshold = 500  # Adjust based on noise levels
-    silence_duration = 4  # Stop after 4 seconds of silence
+        except Exception as e:
+            # Catch-all for other unexpected errors (e.g., file not found)
+            print(f"Unexpected error: {e}")
+            break
+
+def record_audio_as_wav(filename, silence_threshold=500, silence_duration=4):
+    chunk = 1024  # Audio samples per chunk
+    sample_format = pyaudio.paInt16
+    channels = 2
+    fs = 44100  # CD-quality sampling rate
 
     p = pyaudio.PyAudio()
     stream = p.open(format=sample_format,
@@ -61,50 +72,57 @@ def record_audio_as_wav(filename):
 
     frames = []
     silent_chunks = 0
-  
-    # print("Please wait until it says you can start recording")
-    log_to_kafka("Please wait until it says you can start recording")
-    time.sleep(0.2)
+    voice_detected = False
 
-    # print("Recording... Speak now!")
-    log_to_kafka("Recording... Speak now!")
+    # log_to_kafka("Please wait until it says you can start recording")
+    print("Listening for voice...")
 
-    while True:
-        data = stream.read(chunk,exception_on_overflow = False)  # Read chunk of audio
-        # send_audio_stream_to_kafka(data, topic='audio_events')
-        
-        frames.append(data)
+    try:
+        while True:
+            data = stream.read(chunk, exception_on_overflow=False)
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            volume = np.abs(audio_data).mean()
 
-        # Convert to numpy array to measure volume
-        audio_data = np.frombuffer(data, dtype=np.int16)
-        volume = np.abs(audio_data).mean()  # Get average volume level
+            if not voice_detected:
+                if volume > silence_threshold:
+                    voice_detected = True
+                    log_to_kafka("Voice detected. Recording started.")
+                    print("Voice detected. Recording started.")
+                    frames.append(data)  # Start saving from this frame
+                # else: just keep listening
+            else:
+                frames.append(data)
 
-        if volume < silence_threshold:
-            silent_chunks += 1
-        else:
-            silent_chunks = 0  # Reset silent chunk counter if sound is detected
+                if volume < silence_threshold:
+                    silent_chunks += 1
+                else:
+                    silent_chunks = 0  # Reset on voice
 
-        if silent_chunks > (fs / chunk * silence_duration):  # Stop if silent for `silence_duration` seconds
-            print("Silence detected. Stopping recording.")
+                if silent_chunks > (fs / chunk * silence_duration):
+                    print("Silence detected. Stopping recording.")
+                    log_to_kafka("Silence detected. Stopping recording.")
+                    break
 
-            break
+    finally:
+        # Always close the stream
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
 
-    # Stop and close stream
-    stream.stop_stream()
-    stream.close()
-    p.terminate()
-
-  # Save the audio
-    wf = wave.open(filename+".wav", 'wb')
-    wf.setnchannels(channels)
-    wf.setsampwidth(p.get_sample_size(sample_format))
-    wf.setframerate(fs)
-    wf.writeframes(b''.join(frames))
-    wf.close()
-
-    print("Recording saved as", filename+".wav")
-    
-    return filename
+    # Save the audio to file only if something was recorded
+    if frames:
+        output_file = filename + ".wav"
+        wf = wave.open(output_file, 'wb')
+        wf.setnchannels(channels)
+        wf.setsampwidth(p.get_sample_size(sample_format))
+        wf.setframerate(fs)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+        print("Recording saved as", output_file)
+        return filename
+    else:
+        print("No voice detected. No recording saved.")
+        return None
 
 
 def wav_to_mp3(filename):
@@ -133,8 +151,7 @@ def main_producer():
     print('Wait for the onscreen prompt before you start speaking/playing audio. Please record in a noise-free environment...')
 
     filename = record_audio_as_wav('audio_file')   #Captures audio as a wave file using pyaudio library
-
-    mp3_file = wav_to_mp3(filename)     #Takes file and saves as an mp3 which takes up less storage, is sufficiently high quality and is compatible with a host of devices
-
-    send_audio_stream_to_kafka(mp3_file, topic='audio_events')
+    if filename != None:
+        mp3_file = wav_to_mp3(filename)     #Takes file and saves as an mp3 which takes up less storage, is sufficiently high quality and is compatible with a host of devices
+        send_audio_stream_to_kafka(mp3_file, topic='audio_events')
     
